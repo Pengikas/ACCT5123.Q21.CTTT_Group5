@@ -1,0 +1,15 @@
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+shap
+ipywidgets
+flask
+joblib
+pymysql
+sqlalchemy
+python-dotenv
+faker
+requests
+streamlit

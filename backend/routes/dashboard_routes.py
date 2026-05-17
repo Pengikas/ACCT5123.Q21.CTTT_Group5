@@ -1,59 +1,169 @@
-# routes/dashboard_routes.py
-from flask import Blueprint, jsonify
+# backend/routes/dashboard_routes.py
+
+from flask import Blueprint
+from flask import jsonify
+
 import pandas as pd
-from database.db_connection import engine
+
 from sqlalchemy import text
 
-dashboard_bp = Blueprint('dashboard_bp', __name__)
+from backend.database.db_connection import engine
 
+dashboard_bp = Blueprint(
+    "dashboard_bp",
+    __name__
+)
 
-@dashboard_bp.route('/dashboard/summary', methods=['GET'])
+# ====================================
+# DASHBOARD SUMMARY
+# ====================================
+
+@dashboard_bp.route(
+    "/dashboard/summary",
+    methods=["GET"]
+)
 def dashboard_summary():
-    try:
-        query = text("""
-                     SELECT COUNT(*)                                               as total_employees,
-                            SUM(CASE WHEN risk_level = 'High' THEN 1 ELSE 0 END)   as high_risk_count,
-                            SUM(CASE WHEN risk_level = 'Medium' THEN 1 ELSE 0 END) as medium_risk_count,
-                            AVG(probability)                                       as avg_attrition_probability
-                     FROM prediction_history
-                     """)
 
-        df = pd.read_sql(query, engine)
-        result = df.iloc[0].to_dict() if not df.empty else {}
+    try:
+
+        query = text("""
+
+            SELECT
+
+                COUNT(*) as total_employees,
+
+                SUM(
+                    CASE
+                        WHEN Attrition = 'Yes'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) as high_risk_count
+
+            FROM employees
+
+        """)
+
+        df = pd.read_sql(
+            query,
+            engine
+        )
+
+        result = (
+            df.iloc[0].to_dict()
+            if not df.empty
+            else {}
+        )
+
+        total_employees = result.get(
+            "total_employees",
+            0
+        )
+
+        high_risk_count = result.get(
+            "high_risk_count",
+            0
+        )
+
+        attrition_rate = 0
+
+        if total_employees > 0:
+
+            attrition_rate = round(
+
+                (
+                    high_risk_count
+                    / total_employees
+                ) * 100,
+
+                2
+            )
 
         return jsonify({
+
             "success": True,
-            "data": result
+
+            "total_employees":
+                int(total_employees),
+
+            "high_risk_count":
+                int(high_risk_count),
+
+            "attrition_rate":
+                attrition_rate
+
         }), 200
 
     except Exception as e:
+
         return jsonify({
+
             "success": False,
+
             "error": str(e)
+
         }), 500
 
 
-@dashboard_bp.route('/dashboard/trends', methods=['GET'])
-def dashboard_trends():
-    try:
-        query = text("""
-                     SELECT
-                         DATE (prediction_time) as prediction_date, COUNT (*) as total_predictions, AVG (probability) as avg_probability
-                     FROM prediction_history
-                     GROUP BY DATE (prediction_time)
-                     ORDER BY prediction_date DESC
-                         LIMIT 7
-                     """)
+# ====================================
+# DASHBOARD TRENDS
+# ====================================
 
-        df = pd.read_sql(query, engine)
+@dashboard_bp.route(
+    "/dashboard/trends",
+    methods=["GET"]
+)
+def dashboard_trends():
+
+    try:
+
+        query = text("""
+
+            SELECT
+
+                Department,
+
+                COUNT(*) as total_employees,
+
+                SUM(
+                    CASE
+                        WHEN Attrition = 'Yes'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) as attrition_count
+
+            FROM employees
+
+            GROUP BY Department
+
+            ORDER BY attrition_count DESC
+
+        """)
+
+        df = pd.read_sql(
+            query,
+            engine
+        )
 
         return jsonify({
+
             "success": True,
-            "data": df.to_dict(orient='records')
+
+            "data":
+
+                df.to_dict(
+                    orient="records"
+                )
+
         }), 200
 
     except Exception as e:
+
         return jsonify({
+
             "success": False,
+
             "error": str(e)
+
         }), 500

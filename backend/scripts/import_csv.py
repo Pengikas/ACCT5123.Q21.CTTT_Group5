@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine
+
 from backend.config import Config
 
+import os
+
 import pandas as pd
-import random
 
 from faker import Faker
 
@@ -12,91 +14,78 @@ engine = create_engine(
     Config.SQLALCHEMY_DATABASE_URI
 )
 
-# load dataset
-df = pd.read_csv(
-    "data/final/final_ml_dataset.csv"
+# ====================================
+# LOAD DATASET
+# ====================================
+
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )
+    )
 )
 
-departments = [
-    "Engineering",
-    "HR",
-    "Finance",
-    "Marketing",
-    "Sales",
-    "Operations"
-]
+csv_path = os.path.join(
+    BASE_DIR,
+    "data",
+    "WA_Fn-UseC_-HR-Employee-Attrition.csv"
+)
 
-job_roles = {
-    "Engineering": [
-        "Software Engineer",
-        "Data Engineer",
-        "Backend Developer"
-    ],
+df = pd.read_csv(csv_path)
 
-    "HR": [
-        "HR Specialist",
-        "Recruiter"
-    ],
-
-    "Finance": [
-        "Financial Analyst",
-        "Accountant"
-    ],
-
-    "Marketing": [
-        "Marketing Specialist",
-        "SEO Executive"
-    ],
-
-    "Sales": [
-        "Sales Executive",
-        "Business Development"
-    ],
-
-    "Operations": [
-        "Operations Analyst",
-        "Project Coordinator"
-    ]
-}
-
-# generate fake info (ERP)
+# ====================================
+# GENERATE ERP FIELDS
+# ====================================
 
 employee_names = []
-employee_departments = []
-employee_roles = []
+
 employee_emails = []
 
 for _ in range(len(df)):
 
     name = fake.name()
 
-    dept = random.choice(departments)
-
-    role = random.choice(job_roles[dept])
-
     email = (
+
         name.lower()
+
         .replace(" ", ".")
+
         + "@gmail.com"
     )
 
     employee_names.append(name)
-    employee_departments.append(dept)
-    employee_roles.append(role)
+
     employee_emails.append(email)
 
-# add columns
-df["employee_name"] = employee_names
-df["department"] = employee_departments
-df["job_role"] = employee_roles
-df["email"] = employee_emails
+# ====================================
+# ADD ERP COLUMNS
+# ====================================
 
-# save to mysql
+df["employee_name"] = (
+    employee_names
+)
+
+df["email"] = (
+    employee_emails
+)
+
+# ====================================
+# SAVE TO MYSQL
+# ====================================
+
 df.to_sql(
+
     name="employees",
+
     con=engine,
-    if_exists="append",
+
+    if_exists="replace",
+
     index=False
 )
 
-print("CSV imported successfully!")
+print(
+    "CSV imported successfully!"
+)

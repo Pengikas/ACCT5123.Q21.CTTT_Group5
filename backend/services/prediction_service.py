@@ -1,33 +1,99 @@
-# services/prediction_service.py
-from services.preprocessing import preprocess_employee
-from services.model_service import load_model
+# backend/services/prediction_service.py
+
+from backend.services.preprocessing import (
+    preprocess_employee
+)
+
+from backend.services.model_service import (
+    load_model,
+    get_preprocessing_params
+)
+
+# ====================================
+# LOAD PARAMS
+# ====================================
+
+PARAMS = get_preprocessing_params()
+
+THRESHOLD = PARAMS[
+    "threshold_recommended"
+]
+
+# ====================================
+# RUN PREDICTION
+# ====================================
 
 def run_prediction(employee):
-    model = load_model()
-    if model is None:
-        return {"success": False, "error": "Model not loaded"}
 
-    processed_input = preprocess_employee(employee)
+    try:
 
-    # Get probability for Attrition class (class = 1)
-    classes = model.classes_
+        # load trained model
 
-    probabilities = model.predict_proba(
-        processed_input
-    )[0]
+        model = load_model()
 
-    attrition_index = list(classes).index(1)
+        if model is None:
 
-    probability = probabilities[attrition_index]
-    if probability > 0.7:
-        risk_level = "High"
-    elif probability >= 0.4:
-        risk_level = "Medium"
-    else:
-        risk_level = "Low"
+            return {
 
-    return {
-        "success": True,
-        "attrition_probability": round(float(probability), 3),
-        "risk_level": risk_level
-    }
+                "success": False,
+
+                "error":
+                    "Model could not be loaded"
+            }
+
+        # preprocess raw employee input
+
+        processed_input = preprocess_employee(
+            employee
+        )
+
+        # get attrition probability
+
+        probability = (
+
+            model.predict_proba(
+                processed_input
+            )[0][1]
+
+        )
+
+        # risk classification
+
+        if probability >= THRESHOLD:
+
+            risk_level = "High"
+
+        elif probability >= 0.5:
+
+            risk_level = "Medium"
+
+        else:
+
+            risk_level = "Low"
+
+        return {
+
+            "success": True,
+
+            "attrition_probability":
+
+                round(
+                    float(probability),
+                    4
+                ),
+
+            "risk_level":
+                risk_level,
+
+            "threshold_used":
+                THRESHOLD
+        }
+
+    except Exception as e:
+
+        return {
+
+            "success": False,
+
+            "error": str(e)
+        }

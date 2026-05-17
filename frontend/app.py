@@ -1,165 +1,676 @@
-# Import thư viện Streamlit để tạo giao diện web
+# frontend/app.py
+
 import streamlit as st
-# Import requests để gọi API backend
 import requests
+import pandas as pd
+
+# ====================================
+# PAGE CONFIG
+# ====================================
 
 st.set_page_config(
-    page_title="Employee Attrition Predictor",
-    layout="centered"
+    page_title="Employee Attrition Dashboard",
+    layout="wide"
 )
 
-# TITLE
-# Hiển thị tiêu đề hệ thống
-st.title("Employee Attrition Prediction System")
-# Header
-st.header("Employee Information")
+BACKEND_URL = "http://127.0.0.1:5000"
 
-# INPUT FORM
-# Number input cho tuổi
-age = st.number_input(
-    "Age",
-    min_value=18,
-    max_value=65,
-    value=30
+# ====================================
+# SIDEBAR
+# ====================================
+
+st.sidebar.title("Navigation")
+
+page = st.sidebar.radio(
+    "Select Page",
+    [
+        "Dashboard",
+        "Employee Database",
+        "Manual Prediction"
+    ]
 )
 
-# Number input cho salary
-salary = st.number_input(
-    "Salary",
-    min_value=1000,
-    value=5000
-)
+# ====================================
+# DASHBOARD PAGE
+# ====================================
 
-# Dropdown chọn job role
-job_role = st.selectbox(
-    "Job Role",
-    ["Manager", "Sales Executive", "Research Scientist"]
-)
+if page == "Dashboard":
 
-# Number input số năm làm việc
-years_at_company = st.number_input(
-    "Years at Company",
-    min_value=0,
-    max_value=40,
-    value=5
-)
+    st.title(
+        "Employee Attrition Dashboard"
+    )
 
-# Slider mức độ hài lòng công việc
-job_satisfaction = st.slider(
-    "Job Satisfaction",
-    1,
-    4,
-    3
-)
+    try:
 
-# Dropdown overtime
-overtime = st.selectbox(
-    "Overtime",
-    ["Yes", "No"]
-)
+        response = requests.get(
+            f"{BACKEND_URL}/dashboard/summary"
+        )
 
-# Divider
-st.divider()
+        if response.status_code == 200:
 
-# PREDICT BUTTON
-if st.button("Predict"):
+            summary = response.json()
 
-    # Validation
-    if age <= 0:
-        st.error("Age must be greater than 0")
+            col1, col2, col3 = st.columns(3)
 
-    elif salary <= 0:
-        st.error("Salary must be greater than 0")
+            with col1:
 
-    else:
+                st.metric(
+                    "Total Employees",
+                    summary["total_employees"]
+                )
 
-        # JSON data
-        data = {
-            "age": age,
-            "salary": salary,
-            "job_role": job_role,
-            "years_at_company": years_at_company,
-            "job_satisfaction": job_satisfaction,
-            "overtime": overtime
+            with col2:
+
+                st.metric(
+                    "High Risk Employees",
+                    summary["high_risk_count"]
+                )
+
+            with col3:
+
+                st.metric(
+                    "Attrition Rate",
+                    f'{summary["attrition_rate"]}%'
+                )
+
+        else:
+
+            st.error(
+                "Failed to load dashboard summary"
+            )
+
+    except Exception as e:
+
+        st.error(str(e))
+
+# ====================================
+# EMPLOYEE DATABASE PAGE
+# ====================================
+
+elif page == "Employee Database":
+
+    st.title(
+        "Employee Database"
+    )
+
+    try:
+
+        response = requests.get(
+            f"{BACKEND_URL}/employees"
+        )
+
+        if response.status_code == 200:
+
+            result = response.json()
+
+            employees = result[
+                "employees"
+            ]
+
+            df = pd.DataFrame(
+                employees
+            )
+
+            st.subheader(
+                "Employee Table"
+            )
+
+            st.dataframe(
+                df,
+                use_container_width=True
+            )
+
+            # ====================================
+            # EMPLOYEE SELECT
+            # ====================================
+
+            employee_ids = (
+
+                df["EmployeeNumber"]
+
+                .tolist()
+            )
+
+            selected_employee_id = (
+
+                st.selectbox(
+
+                    "Select Employee ID",
+
+                    employee_ids
+                )
+            )
+
+            selected_employee = df[
+
+                df["EmployeeNumber"]
+
+                == selected_employee_id
+
+            ].iloc[0]
+
+            # ====================================
+            # EMPLOYEE DETAIL
+            # ====================================
+
+            st.subheader(
+                "Employee Detail"
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                st.write(
+
+                    f"Name: "
+
+                    f"{selected_employee['employee_name']}"
+                )
+
+                st.write(
+
+                    f"Department: "
+
+                    f"{selected_employee['Department']}"
+                )
+
+                st.write(
+
+                    f"Role: "
+
+                    f"{selected_employee['JobRole']}"
+                )
+
+                st.write(
+
+                    f"Risk Level: "
+
+                    f"{selected_employee['risk_level']}"
+                )
+
+            with col2:
+
+                st.write(
+
+                    f"Email: "
+
+                    f"{selected_employee['email']}"
+                )
+
+                st.write(
+
+                    f"Age: "
+
+                    f"{selected_employee['Age']}"
+                )
+
+                st.write(
+
+                    f"Monthly Income: "
+
+                    f"{selected_employee['MonthlyIncome']}"
+                )
+
+                st.write(
+
+                    f"Years At Company: "
+
+                    f"{selected_employee['YearsAtCompany']}"
+                )
+
+            st.divider()
+
+            # ====================================
+            # RUN PREDICTION
+            # ====================================
+
+            if st.button(
+                "Run Employee Prediction"
+            ):
+
+                with st.spinner(
+                    "Predicting..."
+                ):
+
+                    prediction_response = (
+
+                        requests.post(
+
+                            f"{BACKEND_URL}/predict/{selected_employee_id}"
+                        )
+                    )
+
+                    if (
+                        prediction_response.status_code
+                        == 200
+                    ):
+
+                        result = (
+                            prediction_response.json()
+                        )
+
+                        if result["success"]:
+
+                            st.subheader(
+                                "Prediction Result"
+                            )
+
+                            probability = (
+
+                                result[
+                                    "attrition_probability"
+                                ]
+                            )
+
+                            risk_level = (
+
+                                result[
+                                    "risk_level"
+                                ]
+                            )
+
+                            st.write(
+
+                                f"Attrition Probability: "
+
+                                f"{probability * 100:.2f}%"
+                            )
+
+                            if risk_level == "High":
+
+                                st.error(
+
+                                    f"Risk Level: "
+
+                                    f"{risk_level}"
+                                )
+
+                            elif risk_level == "Medium":
+
+                                st.warning(
+
+                                    f"Risk Level: "
+
+                                    f"{risk_level}"
+                                )
+
+                            else:
+
+                                st.success(
+
+                                    f"Risk Level: "
+
+                                    f"{risk_level}"
+                                )
+
+                        else:
+
+                            st.error(
+                                result["error"]
+                            )
+
+                    else:
+
+                        st.error(
+                            "Prediction failed"
+                        )
+
+        else:
+
+            st.error(
+                "Failed to load employees"
+            )
+
+    except Exception as e:
+
+        st.error(str(e))
+
+# ====================================
+# MANUAL PREDICTION PAGE
+# ====================================
+
+elif page == "Manual Prediction":
+
+    st.title(
+        "Manual Employee Prediction"
+    )
+
+    st.subheader(
+        "Employee Information"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        age = st.number_input(
+            "Age",
+            min_value=18,
+            max_value=65,
+            value=30
+        )
+
+        monthly_income = (
+            st.number_input(
+                "Monthly Income",
+                min_value=1000,
+                value=5000
+            )
+        )
+
+        total_working_years = (
+            st.number_input(
+                "Total Working Years",
+                min_value=0,
+                value=10
+            )
+        )
+
+        years_at_company = (
+            st.number_input(
+                "Years At Company",
+                min_value=0,
+                value=5
+            )
+        )
+
+        years_with_curr_manager = (
+            st.number_input(
+                "Years With Current Manager",
+                min_value=0,
+                value=3
+            )
+        )
+
+        business_travel = (
+            st.selectbox(
+                "Business Travel",
+                [
+                    "Travel_Rarely",
+                    "Travel_Frequently",
+                    "Non-Travel"
+                ]
+            )
+        )
+
+        gender = st.selectbox(
+            "Gender",
+            [
+                "Male",
+                "Female"
+            ]
+        )
+
+        overtime = st.selectbox(
+            "OverTime",
+            [
+                "Yes",
+                "No"
+            ]
+        )
+
+    with col2:
+
+        department = st.selectbox(
+            "Department",
+            [
+                "Sales",
+                "Research & Development",
+                "Human Resources"
+            ]
+        )
+
+        education_field = (
+            st.selectbox(
+                "Education Field",
+                [
+                    "Life Sciences",
+                    "Medical",
+                    "Marketing",
+                    "Technical Degree"
+                ]
+            )
+        )
+
+        job_role = st.selectbox(
+            "Job Role",
+            [
+                "Sales Executive",
+                "Research Scientist",
+                "Manager",
+                "Laboratory Technician"
+            ]
+        )
+
+        marital_status = (
+            st.selectbox(
+                "Marital Status",
+                [
+                    "Single",
+                    "Married",
+                    "Divorced"
+                ]
+            )
+        )
+
+        environment_satisfaction = (
+            st.slider(
+                "Environment Satisfaction",
+                1,
+                4,
+                3
+            )
+        )
+
+        job_satisfaction = (
+            st.slider(
+                "Job Satisfaction",
+                1,
+                4,
+                3
+            )
+        )
+
+        relationship_satisfaction = (
+            st.slider(
+                "Relationship Satisfaction",
+                1,
+                4,
+                3
+            )
+        )
+
+        work_life_balance = (
+            st.slider(
+                "Work Life Balance",
+                1,
+                4,
+                3
+            )
+        )
+
+    st.divider()
+
+    if st.button(
+        "Run Manual Prediction"
+    ):
+        employee_data = {
+
+            "Age": age,
+
+            "MonthlyIncome": monthly_income,
+
+            "TotalWorkingYears": total_working_years,
+
+            "DailyRate": 500,
+
+            "YearsAtCompany": years_at_company,
+
+            "YearsWithCurrManager": years_with_curr_manager,
+
+            "BusinessTravel": business_travel,
+
+            "Gender": gender,
+
+            "OverTime": overtime,
+
+            "DistanceFromHome": 5,
+
+            "StockOptionLevel": 1,
+
+            "NumCompaniesWorked": 2,
+
+            "JobLevel": 2,
+
+            "YearsInCurrentRole": 3,
+
+            "EnvironmentSatisfaction":
+                environment_satisfaction,
+
+            "JobSatisfaction":
+                job_satisfaction,
+
+            "JobInvolvement": 3,
+
+            "TrainingTimesLastYear": 2,
+
+            "YearsSinceLastPromotion": 1,
+
+            "RelationshipSatisfaction":
+                relationship_satisfaction,
+
+            "Department": department,
+
+            "EducationField":
+                education_field,
+
+            "JobRole": job_role,
+
+            "MaritalStatus":
+                marital_status,
+
+            "WorkLifeBalance":
+                work_life_balance,
+
+            # ====================================
+            # ADD MISSING RAW IBM FIELDS
+            # ====================================
+
+            "Education": 3,
+
+            "HourlyRate": 80,
+
+            "MonthlyRate": 15000,
+
+            "PercentSalaryHike": 15,
+
+            "PerformanceRating": 3,
+
+            "EmployeeCount": 1,
+
+            "Over18": "Y",
+
+            "StandardHours": 80
         }
 
-        # Loading spinner
-        with st.spinner("Predicting..."):
+        with st.spinner(
+            "Predicting..."
+        ):
 
             try:
 
-                # API request
                 response = requests.post(
-                    "http://127.0.0.1:5000/predict",
-                    json=data,
-                    timeout=10
+
+                    f"{BACKEND_URL}/predict/manual",
+
+                    json=employee_data,
+
+                    timeout=15
                 )
 
-                # Status check
                 if response.status_code == 200:
 
                     result = response.json()
 
-                    st.success("Prediction completed successfully")
+                    if result["success"]:
 
-                    # Get results
-                    probability = result["attrition_probability"]
+                        st.success(
+                            "Prediction completed"
+                        )
 
-                    risk_level = result["risk_level"]
+                        probability = result[
+                            "attrition_probability"
+                        ]
 
-                    # DISPLAY RESULT
-                    st.subheader("Prediction Result")
+                        risk_level = result[
+                            "risk_level"
+                        ]
 
-                    st.write(
-                        f"Attrition Probability: {probability*100:.2f}%"
-                    )
+                        st.subheader(
+                            "Prediction Result"
+                        )
 
-                    # Risk display
-                    if risk_level == "High":
+                        st.write(
+                            f"Attrition Probability: {probability * 100:.2f}%"
+                        )
 
-                        st.error(f"Risk Level: {risk_level}")
+                        if risk_level == "High":
 
-                    elif risk_level == "Medium":
+                            st.error(
+                                f"Risk Level: {risk_level}"
+                            )
 
-                        st.warning(f"Risk Level: {risk_level}")
+                            st.warning(
+                                "Immediate retention action recommended"
+                            )
+
+                        elif risk_level == "Medium":
+
+                            st.warning(
+                                f"Risk Level: {risk_level}"
+                            )
+
+                            st.info(
+                                "Monitor employee engagement closely"
+                            )
+
+                        else:
+
+                            st.success(
+                                f"Risk Level: {risk_level}"
+                            )
+
+                            st.info(
+                                "Employee condition is stable"
+                            )
 
                     else:
 
-                        st.success(f"Risk Level: {risk_level}")
-
-                    # Recommendation
-                    st.subheader("Recommendation")
-
-                    if risk_level == "High":
-
-                        st.write(
-                            "Take retention action immediately"
-                        )
-
-                    elif risk_level == "Medium":
-
-                        st.write(
-                            "Monitor employee condition"
-                        )
-
-                    else:
-
-                        st.write(
-                            "Employee condition is stable"
+                        st.error(
+                            result["error"]
                         )
 
                 else:
 
-                    st.error("Backend returned an error")
+                    st.error(
+                        "Backend prediction failed"
+                    )
 
             except requests.exceptions.ConnectionError:
 
-                st.error("Cannot connect to backend")
+                st.error(
+                    "Cannot connect to backend"
+                )
 
             except requests.exceptions.Timeout:
 
-                st.error("Request timeout")
+                st.error(
+                    "Request timeout"
+                )
 
             except Exception as e:
 
-                st.error(f"Unexpected error: {e}")
+                st.error(
+                    f"Unexpected error: {e}"
+                )

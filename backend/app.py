@@ -1,13 +1,13 @@
 # app.py
 from flask import Flask
-from config import Config
+from backend.config import Config
 
 # Import blueprints
-from routes.employee_routes import employee_bp
-from routes.prediction_routes import prediction_bp
-from routes.dashboard_routes import dashboard_bp
-from routes.analytics_routes import analytics_bp
-from routes.report_routes import report_bp
+from backend.routes.employee_routes import employee_bp
+from backend.routes.prediction_routes import prediction_bp
+from backend.routes.dashboard_routes import dashboard_bp
+from backend.routes.analytics_routes import analytics_bp
+from backend.routes.report_routes import report_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)

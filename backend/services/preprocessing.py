@@ -1,100 +1,408 @@
-# services/preprocessing.py
+# backend/services/preprocessing.py
 
 import pandas as pd
-import joblib
+import numpy as np
 
-# load exact feature order used during training
-TOP_COLS = joblib.load("../model/top_cols.pkl")
+from backend.services.model_service import (
+    get_top_cols,
+    get_preprocessing_params
+)
 
+# ====================================
+# LOAD TRAINING ARTIFACTS
+# ====================================
+
+TOP_COLS = get_top_cols()
+
+PARAMS = get_preprocessing_params()
+
+travel_map = PARAMS["travel_map"]
+
+overtime_map = PARAMS["overtime_map"]
+
+gender_map = PARAMS["gender_map"]
+
+income_q25_train = PARAMS[
+    "income_q25_train"
+]
+
+nominal_cols = PARAMS[
+    "nominal_cols"
+]
+
+skewed_features = PARAMS[
+    "skewed_features"
+]
+
+# ====================================
+# REQUIRED INPUT FIELDS
+# ====================================
+
+required_fields = [
+
+    "Age",
+    "MonthlyIncome",
+    "TotalWorkingYears",
+    "DailyRate",
+    "YearsAtCompany",
+    "YearsWithCurrManager",
+
+    "BusinessTravel",
+    "Gender",
+    "OverTime",
+
+    "DistanceFromHome",
+    "StockOptionLevel",
+    "NumCompaniesWorked",
+
+    "JobLevel",
+    "YearsInCurrentRole",
+
+    "EnvironmentSatisfaction",
+    "JobSatisfaction",
+    "JobInvolvement",
+
+    "TrainingTimesLastYear",
+    "YearsSinceLastPromotion",
+    "RelationshipSatisfaction",
+
+    "Department",
+    "EducationField",
+    "JobRole",
+    "MaritalStatus",
+
+    "WorkLifeBalance"
+]
+
+# ====================================
+# VALIDATION
+# ====================================
+
+def validate_employee_input(employee):
+
+    missing_fields = []
+
+    for field in required_fields:
+
+        if (
+
+            field not in employee
+
+            or
+
+            employee[field] in [None, ""]
+
+        ):
+
+            missing_fields.append(field)
+
+    if missing_fields:
+
+        raise ValueError(
+            f"Missing required fields: {missing_fields}"
+        )
+
+    # ====================================
+    # BASIC NUMERIC VALIDATION
+    # ====================================
+
+    if employee["Age"] <= 0:
+
+        raise ValueError(
+            "Age must be greater than 0"
+        )
+
+    if employee["MonthlyIncome"] <= 0:
+
+        raise ValueError(
+            "MonthlyIncome must be greater than 0"
+        )
+
+    if employee["TotalWorkingYears"] < 0:
+
+        raise ValueError(
+            "TotalWorkingYears cannot be negative"
+        )
+
+    if employee["YearsAtCompany"] < 0:
+
+        raise ValueError(
+            "YearsAtCompany cannot be negative"
+        )
+
+# ====================================
+# MAIN PREPROCESSING
+# ====================================
 
 def preprocess_employee(employee):
 
-    overtime_map = {
-        "Yes": 1,
-        "No": 0
-    }
+    # validate raw input
 
-    overtime = overtime_map.get(employee.get("OverTime"), 0)
+    validate_employee_input(employee)
 
-    work_life_balance = employee.get("WorkLifeBalance")
+    # convert to dataframe
 
-    environment_satisfaction = employee.get("EnvironmentSatisfaction")
-    job_satisfaction = employee.get("JobSatisfaction")
-    relationship_satisfaction = employee.get("RelationshipSatisfaction")
+    df = pd.DataFrame([employee])
 
-    # feature enrich
+    # ====================================
+    # REMOVE TARGET COLUMN
+    # ====================================
 
-    work_stress = overtime * (4 - work_life_balance)
+    if "Attrition" in df.columns:
 
-    satisfaction_index = (
-        environment_satisfaction +
-        job_satisfaction +
-        relationship_satisfaction
-    ) / 3
+        df = df.drop(
+            columns=["Attrition"]
+        )
 
-    data = {
-        "MonthlyIncome": employee.get("MonthlyIncome"),
-        "Age": employee.get("Age"),
-        "TotalWorkingYears": employee.get("TotalWorkingYears"),
-        "DailyRate": employee.get("DailyRate"),
-        "YearsAtCompany": employee.get("YearsAtCompany"),
-        "YearsWithCurrManager": employee.get("YearsWithCurrManager"),
+    # ====================================
+    # SAFE ENCODING
+    # ====================================
 
-        "SatisfactionIndex": satisfaction_index,
+    # BusinessTravel
 
-        "OverTime": overtime,
+    if str(df["BusinessTravel"].dtype) == "object":
 
-        "DistanceFromHome": employee.get("DistanceFromHome"),
-        "StockOptionLevel": employee.get("StockOptionLevel"),
-        "NumCompaniesWorked": employee.get("NumCompaniesWorked"),
+        df["BusinessTravel"] = (
 
-        "WorkStress": work_stress,
+            df["BusinessTravel"]
 
-        "JobLevel": employee.get("JobLevel"),
-        "YearsInCurrentRole": employee.get("YearsInCurrentRole"),
+            .map(travel_map)
 
-        "EnvironmentSatisfaction": environment_satisfaction,
-        "JobSatisfaction": job_satisfaction,
-        "JobInvolvement": employee.get("JobInvolvement"),
+        )
 
-        "TrainingTimesLastYear": employee.get("TrainingTimesLastYear"),
-        "YearsSinceLastPromotion": employee.get("YearsSinceLastPromotion"),
-        "RelationshipSatisfaction": relationship_satisfaction,
-    }
+    # Gender
 
-    df = pd.DataFrame([data])
+    if str(df["Gender"].dtype) == "object":
 
-    # IMPORTANT:
-    # force exact feature order used during training
-    df = df[TOP_COLS]
+        df["Gender"] = (
 
-    return df
+            df["Gender"]
 
+            .map(gender_map)
 
-def preprocess_dataframe(df):
+        )
 
-    overtime_map = {
-        "Yes": 1,
-        "No": 0
-    }
+    # OverTime
 
-    # encode
-    df["OverTime"] = df["OverTime"].map(overtime_map)
+    if str(df["OverTime"].dtype) == "object":
 
-    # feature engineering
-    df["WorkStress"] = (
-        df["OverTime"] *
-        (4 - df["WorkLifeBalance"])
+        df["OverTime"] = (
+
+            df["OverTime"]
+
+            .map(overtime_map)
+
+        )
+
+    # ====================================
+    # ONE HOT ENCODING
+    # ====================================
+
+    df = pd.get_dummies(
+
+        df,
+
+        columns=nominal_cols,
+
+        drop_first=True,
+
+        dtype=int
     )
 
-    df["SatisfactionIndex"] = (
-        df["EnvironmentSatisfaction"] +
-        df["JobSatisfaction"] +
-        df["RelationshipSatisfaction"]
-    ) / 3
+    # ====================================
+    # FEATURE ENGINEERING
+    # ====================================
 
-    # select exact training columns
+    # binary features
+
+    df["IsYoung"] = (
+
+        df["Age"] < 30
+
+    ).astype(int)
+
+    df["IsNewHire"] = (
+
+        df["YearsAtCompany"] < 2
+
+    ).astype(int)
+
+    df["HasStockOption"] = (
+
+        df["StockOptionLevel"] > 0
+
+    ).astype(int)
+
+    df["IsLowIncome"] = (
+
+        df["MonthlyIncome"] < income_q25_train
+
+    ).astype(int)
+
+    # marital status
+
+    if "MaritalStatus_Single" in df.columns:
+
+        df["IsSingle"] = (
+
+            df["MaritalStatus_Single"]
+
+        )
+
+    else:
+
+        df["IsSingle"] = 0
+
+    # ====================================
+    # INTERACTION FEATURES
+    # ====================================
+
+    df["OT_LowJobSat"] = (
+
+        (
+
+            df["OverTime"] == 1
+
+        )
+
+        &
+
+        (
+
+            df["JobSatisfaction"] <= 2
+
+        )
+
+    ).astype(int)
+
+    df["OT_LowEnvSat"] = (
+
+        (
+
+            df["OverTime"] == 1
+
+        )
+
+        &
+
+        (
+
+            df["EnvironmentSatisfaction"] <= 2
+
+        )
+
+    ).astype(int)
+
+    df["OT_LowWLB"] = (
+
+        (
+
+            df["OverTime"] == 1
+
+        )
+
+        &
+
+        (
+
+            df["WorkLifeBalance"] <= 2
+
+        )
+
+    ).astype(int)
+
+    # ====================================
+    # RATIO FEATURES
+    # ====================================
+
+    df["ManagerStability"] = (
+
+        df["YearsWithCurrManager"]
+
+        /
+
+        (
+
+            df["YearsAtCompany"] + 1
+
+        )
+
+    )
+
+    df["PromotionGap"] = (
+
+        df["YearsSinceLastPromotion"]
+
+        /
+
+        (
+
+            df["YearsAtCompany"] + 1
+
+        )
+
+    )
+
+    df["IncomePerYear"] = (
+
+        df["MonthlyIncome"]
+
+        /
+
+        (
+
+            df["TotalWorkingYears"] + 1
+
+        )
+
+    )
+
+    # ====================================
+    # LOG TRANSFORMATION
+    # ====================================
+
+    for col in skewed_features:
+
+        # prevent negative values
+
+        df[col] = df[col].clip(
+            lower=0
+        )
+
+        df[f"{col}_log"] = np.log1p(
+            df[col]
+        )
+
+    # ====================================
+    # FEATURE ALIGNMENT
+    # ====================================
+
+    # add missing columns
+    # from training feature space
+
+    for col in TOP_COLS:
+
+        if col not in df.columns:
+
+            df[col] = 0
+
+    # exact training order
+
     df = df[TOP_COLS]
 
-    return df
+    # ====================================
+    # FINAL CLEANUP
+    # ====================================
 
+    # force numeric types
+
+    df = df.apply(
+        pd.to_numeric,
+        errors="coerce"
+    )
+
+    # remove NaN
+
+    df = df.fillna(0)
+
+    return df

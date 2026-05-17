@@ -1,12 +1,25 @@
 # routes/analytics_routes.py
 
 from flask import Blueprint, jsonify
-from services.model_service import load_model
+from backend.services.model_service import load_model
 import joblib
+import os
 
 analytics_bp = Blueprint('analytics_bp', __name__)
+# load exact feature order used during training
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
 
-TOP_COLS = joblib.load("../model/top_cols.pkl")
+top_cols_path = os.path.join(
+    BASE_DIR,
+    "model",
+    "feature_names_lr.pkl"
+)
+
+TOP_COLS = joblib.load(top_cols_path)
 
 
 @analytics_bp.route('/analytics/feature-importance', methods=['GET'])

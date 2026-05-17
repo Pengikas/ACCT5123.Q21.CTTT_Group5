@@ -4,8 +4,8 @@
 ```
 cd backend
 docker compose up -d
-python scripts/import_csv.py
-python app.py
+python -m backend.scripts.import_csv 
+python -m backend.app 
 ```
 stop docker container
 ```aiignore
