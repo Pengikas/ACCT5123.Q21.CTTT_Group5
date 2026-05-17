@@ -1,0 +1,8 @@
+feature,chi2,dof,p_value,significant,cramers_v,effect
+BusinessTravel,24.18,2,0.0,True,0.128,Small
+OverTime,87.56,1,0.0,True,0.244,Small
+MaritalStatus,46.16,2,0.0,True,0.177,Small
+JobRole,86.19,8,0.0,True,0.242,Small
+Department,10.8,2,0.0045,True,0.086,Negligible
+EducationField,16.02,5,0.0068,True,0.104,Small
+Gender,1.12,1,0.2906,False,0.028,Negligible

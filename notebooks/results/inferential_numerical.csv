@@ -1,0 +1,24 @@
+feature,test,mean_stayed,mean_left,p_value,significant,cohen_d,effect
+Age,Mann-Whitney U,37.561,33.608,0.0,True,0.425,Small
+JobLevel,Mann-Whitney U,2.146,1.637,0.0,True,0.493,Small
+JobInvolvement,Mann-Whitney U,2.77,2.519,0.0,True,0.343,Small
+MonthlyIncome,Mann-Whitney U,6832.74,4787.093,0.0,True,0.479,Small
+StockOptionLevel,Mann-Whitney U,0.845,0.527,0.0,True,0.374,Small
+YearsWithCurrManager,Mann-Whitney U,4.367,2.852,0.0,True,0.449,Small
+YearsAtCompany,Mann-Whitney U,7.369,5.131,0.0,True,0.372,Small
+TotalWorkingYears,Mann-Whitney U,11.863,8.245,0.0,True,0.484,Small
+YearsInCurrentRole,Mann-Whitney U,4.484,2.903,0.0,True,0.462,Small
+JobSatisfaction,Mann-Whitney U,2.779,2.468,0.0001,True,0.281,Small
+EnvironmentSatisfaction,Mann-Whitney U,2.771,2.464,0.0002,True,0.274,Small
+DistanceFromHome,Mann-Whitney U,8.916,10.633,0.0024,True,0.209,Small
+DailyRate,Mann-Whitney U,812.504,750.363,0.029,True,0.154,Negligible
+YearsSinceLastPromotion,Mann-Whitney U,2.234,1.945,0.0412,True,0.091,Negligible
+WorkLifeBalance,Mann-Whitney U,2.781,2.658,0.0465,True,0.163,Negligible
+TrainingTimesLastYear,Mann-Whitney U,2.833,2.624,0.0473,True,0.164,Negligible
+RelationshipSatisfaction,Mann-Whitney U,2.734,2.599,0.102,False,0.123,Negligible
+NumCompaniesWorked,Mann-Whitney U,2.646,2.941,0.2424,False,0.115,Negligible
+Education,Mann-Whitney U,2.927,2.84,0.2448,False,0.086,Negligible
+PercentSalaryHike,Mann-Whitney U,15.231,15.097,0.3655,False,0.036,Negligible
+MonthlyRate,Mann-Whitney U,14265.779,14559.308,0.5587,False,0.041,Negligible
+HourlyRate,Mann-Whitney U,65.952,65.574,0.7976,False,0.019,Negligible
+PerformanceRating,Mann-Whitney U,3.153,3.156,0.9119,False,0.008,Negligible

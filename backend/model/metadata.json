@@ -1,0 +1,182 @@
+{
+  "project": "IBM Employee Attrition \u2014 ERP HR Module",
+  "version": "1.0.0",
+  "trained_at": "2026-05-17T15:57:20.658851",
+  "approach": "LR (baseline) vs XGBoost (main model)",
+  "best_model": "Logistic Regression",
+  "best_model_file": "models/best_model.pkl",
+  "preprocessing_file": "models/preprocessing_params.pkl",
+  "feature_names_lr_file": "models/feature_names_lr.pkl",
+  "feature_names_xgb_file": "models/feature_names_xgb.pkl",
+  "leakage_prevention": [
+    "Data split BEFORE feature engineering",
+    "Quantile thresholds learned from train only",
+    "Scaling inside ImbPipeline for CV integrity",
+    "No SMOTE \u2014 used class_weight / scale_pos_weight"
+  ],
+  "dataset": {
+    "source": "WA_Fn-UseC_-HR-Employee-Attrition.csv",
+    "n_rows": 1470,
+    "n_features_lr": 44,
+    "n_features_xgb": 41,
+    "target": "Attrition",
+    "attrition_rate": 0.16122448979591836,
+    "class_imbalance": 5.198795180722891
+  },
+  "split": {
+    "train": 1029,
+    "val": 220,
+    "test": 221,
+    "random_state": 42
+  },
+  "thresholds": {
+    "default": 0.5,
+    "max_f1": 0.7,
+    "max_f2": 0.42,
+    "max_recall": 0.38,
+    "min_cost": 0.1,
+    "recommended": 0.42
+  },
+  "business_cost_assumptions": {
+    "COST_FN_USD": 50000,
+    "COST_FP_USD": 200,
+    "COST_TP_USD": 1000,
+    "COST_TN_USD": 0,
+    "note": "Adjust to company-specific values before production use"
+  },
+  "test_metrics": {
+    "lr_default": {
+      "precision": 0.4426229508196721,
+      "recall": 0.75,
+      "f1": 0.5567010309278351,
+      "roc_auc": 0.8647147147147147
+    },
+    "best_model_max_f2": {
+      "precision": 0.35802469135802467,
+      "recall": 0.8055555555555556,
+      "f1": 0.49572649572649574,
+      "f2": 0.6444444444444445,
+      "roc_auc": 0.8647147147147147
+    }
+  },
+  "bootstrap_ci_95": {
+    "precision": {
+      "estimate": 0.3593,
+      "ci_lower": 0.2571,
+      "ci_upper": 0.4684
+    },
+    "recall": {
+      "estimate": 0.8102,
+      "ci_lower": 0.6774,
+      "ci_upper": 0.9286
+    },
+    "f1": {
+      "estimate": 0.4956,
+      "ci_lower": 0.3838,
+      "ci_upper": 0.5986
+    },
+    "roc_auc": {
+      "estimate": 0.8666,
+      "ci_lower": 0.805,
+      "ci_upper": 0.9207
+    },
+    "pr_auc": {
+      "estimate": 0.6306,
+      "ci_lower": 0.473,
+      "ci_upper": 0.764
+    }
+  },
+  "topk_test": {
+    "top_5_pct": {
+      "k_employees": 12,
+      "leavers_caught": 11,
+      "precision_at_k": 0.9167,
+      "recall_at_k": 0.3056,
+      "lift_at_k": 5.63
+    },
+    "top_10_pct": {
+      "k_employees": 23,
+      "leavers_caught": 14,
+      "precision_at_k": 0.6087,
+      "recall_at_k": 0.3889,
+      "lift_at_k": 3.74
+    },
+    "top_15_pct": {
+      "k_employees": 34,
+      "leavers_caught": 20,
+      "precision_at_k": 0.5882,
+      "recall_at_k": 0.5556,
+      "lift_at_k": 3.61
+    },
+    "top_20_pct": {
+      "k_employees": 45,
+      "leavers_caught": 21,
+      "precision_at_k": 0.4667,
+      "recall_at_k": 0.5833,
+      "lift_at_k": 2.86
+    },
+    "top_25_pct": {
+      "k_employees": 56,
+      "leavers_caught": 24,
+      "precision_at_k": 0.4286,
+      "recall_at_k": 0.6667,
+      "lift_at_k": 2.63
+    },
+    "top_30_pct": {
+      "k_employees": 67,
+      "leavers_caught": 27,
+      "precision_at_k": 0.403,
+      "recall_at_k": 0.75,
+      "lift_at_k": 2.47
+    },
+    "top_40_pct": {
+      "k_employees": 89,
+      "leavers_caught": 30,
+      "precision_at_k": 0.3371,
+      "recall_at_k": 0.8333,
+      "lift_at_k": 2.07
+    },
+    "top_50_pct": {
+      "k_employees": 111,
+      "leavers_caught": 35,
+      "precision_at_k": 0.3153,
+      "recall_at_k": 0.9722,
+      "lift_at_k": 1.94
+    }
+  },
+  "web_api": {
+    "input_fields": [
+      "Age",
+      "Gender",
+      "MaritalStatus",
+      "Education",
+      "EducationField",
+      "Department",
+      "JobRole",
+      "JobLevel",
+      "JobInvolvement",
+      "BusinessTravel",
+      "OverTime",
+      "MonthlyIncome",
+      "StockOptionLevel",
+      "EnvironmentSatisfaction",
+      "JobSatisfaction",
+      "RelationshipSatisfaction",
+      "WorkLifeBalance",
+      "TrainingTimesLastYear",
+      "TotalWorkingYears",
+      "YearsAtCompany",
+      "YearsInCurrentRole",
+      "YearsSinceLastPromotion",
+      "YearsWithCurrManager",
+      "NumCompaniesWorked",
+      "DistanceFromHome"
+    ],
+    "output": {
+      "attrition_probability": "float [0, 1]",
+      "risk_level": "High Risk | Low Risk",
+      "threshold_used": "float"
+    },
+    "derived_features_note": "Backend auto-computes: IsYoung, IsNewHire, HasStockOption, IsLowIncome, OT_LowJobSat, OT_LowEnvSat, OT_LowWLB, ManagerStability, PromotionGap, IncomePerYear, MonthlyIncome_log"
+  }
+}

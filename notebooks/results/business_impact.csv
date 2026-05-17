@@ -1,0 +1,7 @@
+config,threshold,flagged_for_action,true_at_risk_caught,missed_leavers,false_alarms,catch_rate_%,alarm_accuracy_%
+LR default 0.50,0.5,61,27,9,34,75.0,44.3
+LR tuned 0.42,0.42,81,29,7,52,80.6,35.8
+XGB default 0.50,0.5,74,28,8,46,77.8,37.8
+XGB tuned 0.48,0.48,82,28,8,54,77.8,34.1
+LR top 20% riskiest,top-k,45,21,15,24,58.3,46.7
+XGB top 20% riskiest,top-k,45,22,14,23,61.1,48.9
