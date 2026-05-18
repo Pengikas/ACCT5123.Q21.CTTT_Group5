@@ -14,3 +14,4 @@ python-dotenv
 faker
 requests
 streamlit
+cryptography
