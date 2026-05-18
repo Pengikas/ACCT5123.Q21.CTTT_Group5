@@ -5,6 +5,73 @@ import requests
 import pandas as pd
 
 # ====================================
+# SESSION STATE INIT
+# ====================================
+
+if "age" not in st.session_state:
+    st.session_state.age = 30
+
+if "total_working_years" not in st.session_state:
+    st.session_state.total_working_years = 10
+
+if "years_at_company" not in st.session_state:
+    st.session_state.years_at_company = 5
+
+if "years_with_curr_manager" not in st.session_state:
+    st.session_state.years_with_curr_manager = 3
+
+if "years_in_current_role" not in st.session_state:
+    st.session_state.years_in_current_role = 3
+
+if "years_since_last_promotion" not in st.session_state:
+    st.session_state.years_since_last_promotion = 1
+
+# ====================================
+# AUTO VALIDATION LOGIC
+# ====================================
+
+def sync_working_years():
+
+    max_working_years = max(
+        st.session_state.age - 18,
+        0
+    )
+
+    # clamp total working years
+    st.session_state.total_working_years = min(
+        st.session_state.total_working_years,
+        max_working_years
+    )
+
+    # clamp company years
+    st.session_state.years_at_company = min(
+        st.session_state.years_at_company,
+        st.session_state.total_working_years
+    )
+    sync_company_years()
+
+def sync_company_years():
+
+    max_company_years = (
+        st.session_state.years_at_company
+    )
+
+    st.session_state.years_with_curr_manager = min(
+        st.session_state.years_with_curr_manager,
+        max_company_years
+    )
+
+    st.session_state.years_in_current_role = min(
+        st.session_state.years_in_current_role,
+        max_company_years
+    )
+
+    st.session_state.years_since_last_promotion = min(
+        st.session_state.years_since_last_promotion,
+        max_company_years
+    )
+
+# ====================================
 # PAGE CONFIG
 # ====================================
 
@@ -342,6 +409,10 @@ elif page == "Manual Prediction":
 
     col1, col2 = st.columns(2)
 
+    # ====================================
+    # LEFT COLUMN
+    # ====================================
+
     with col1:
 
         age = st.number_input(
@@ -351,47 +422,67 @@ elif page == "Manual Prediction":
             value=30
         )
 
-        monthly_income = (
-            st.number_input(
-                "Monthly Income",
-                min_value=1000,
-                value=5000
-            )
+        monthly_income = st.number_input(
+            "Monthly Income",
+            min_value=1000,
+            value=5000
         )
 
-        total_working_years = (
-            st.number_input(
-                "Total Working Years",
-                min_value=0,
-                value=10
-            )
+        # ====================================
+        # WORKING YEARS LOGIC
+        # ====================================
+
+        max_working_years = max(
+            age - 18,
+            0
         )
 
-        years_at_company = (
-            st.number_input(
-                "Years At Company",
-                min_value=0,
-                value=5
-            )
+        total_working_years = st.number_input(
+            "Total Working Years",
+            min_value=0,
+            max_value=max_working_years,
+            value=min(10, max_working_years)
         )
 
-        years_with_curr_manager = (
-            st.number_input(
-                "Years With Current Manager",
-                min_value=0,
-                value=3
-            )
+        years_at_company = st.number_input(
+            "Years At Company",
+            min_value=0,
+            max_value=total_working_years,
+            value=min(5, total_working_years)
         )
 
-        business_travel = (
-            st.selectbox(
-                "Business Travel",
-                [
-                    "Travel_Rarely",
-                    "Travel_Frequently",
-                    "Non-Travel"
-                ]
-            )
+        years_with_curr_manager = st.number_input(
+            "Years With Current Manager",
+            min_value=0,
+            max_value=years_at_company,
+            value=min(3, years_at_company)
+        )
+
+        years_in_current_role = st.number_input(
+            "Years In Current Role",
+            min_value=0,
+            max_value=years_at_company,
+            value=min(3, years_at_company)
+        )
+
+        years_since_last_promotion = st.number_input(
+            "Years Since Last Promotion",
+            min_value=0,
+            max_value=total_working_years,
+            value=min(1, total_working_years)
+        )
+
+        # ====================================
+        # BASIC HR FEATURES
+        # ====================================
+
+        business_travel = st.selectbox(
+            "Business Travel",
+            [
+                "Travel_Rarely",
+                "Travel_Frequently",
+                "Non-Travel"
+            ]
         )
 
         gender = st.selectbox(
@@ -410,6 +501,10 @@ elif page == "Manual Prediction":
             ]
         )
 
+    # ====================================
+    # RIGHT COLUMN
+    # ====================================
+
     with col2:
 
         department = st.selectbox(
@@ -421,16 +516,14 @@ elif page == "Manual Prediction":
             ]
         )
 
-        education_field = (
-            st.selectbox(
-                "Education Field",
-                [
-                    "Life Sciences",
-                    "Medical",
-                    "Marketing",
-                    "Technical Degree"
-                ]
-            )
+        education_field = st.selectbox(
+            "Education Field",
+            [
+                "Life Sciences",
+                "Medical",
+                "Marketing",
+                "Technical Degree"
+            ]
         )
 
         job_role = st.selectbox(
@@ -443,77 +536,126 @@ elif page == "Manual Prediction":
             ]
         )
 
-        marital_status = (
-            st.selectbox(
-                "Marital Status",
-                [
-                    "Single",
-                    "Married",
-                    "Divorced"
-                ]
-            )
+        marital_status = st.selectbox(
+            "Marital Status",
+            [
+                "Single",
+                "Married",
+                "Divorced"
+            ]
         )
 
-        environment_satisfaction = (
-            st.slider(
-                "Environment Satisfaction",
-                1,
-                4,
-                3
-            )
+        environment_satisfaction = st.slider(
+            "Environment Satisfaction",
+            1,
+            5,
+            3
         )
 
-        job_satisfaction = (
-            st.slider(
-                "Job Satisfaction",
-                1,
-                4,
-                3
-            )
+        job_satisfaction = st.slider(
+            "Job Satisfaction",
+            1,
+            5,
+            3
         )
 
-        relationship_satisfaction = (
-            st.slider(
-                "Relationship Satisfaction",
-                1,
-                4,
-                3
-            )
+        relationship_satisfaction = st.slider(
+            "Relationship Satisfaction",
+            1,
+            5,
+            3
         )
 
-        work_life_balance = (
-            st.slider(
-                "Work Life Balance",
-                1,
-                4,
-                3
-            )
+        work_life_balance = st.slider(
+            "Work Life Balance",
+            1,
+            5,
+            3
         )
+
+    # ====================================
+    # FINAL BUSINESS LOGIC SAFETY CLAMP
+    # ====================================
+
+    years_at_company = min(
+        years_at_company,
+        total_working_years
+    )
+
+    years_with_curr_manager = min(
+        years_with_curr_manager,
+        years_at_company
+    )
+
+    years_in_current_role = min(
+        years_in_current_role,
+        years_at_company
+    )
+
+    years_since_last_promotion = min(
+        years_since_last_promotion,
+        total_working_years
+    )
+
+    # ====================================
+    # HR PROFILE SUMMARY
+    # ====================================
 
     st.divider()
+
+    st.info(
+
+        f"""
+        Employee Profile Summary
+
+        • Age: {age}
+
+        • Total Working Years: {total_working_years}
+
+        • Years At Company: {years_at_company}
+
+        • Years With Current Manager: {years_with_curr_manager}
+
+        • Years In Current Role: {years_in_current_role}
+
+        • Years Since Last Promotion: {years_since_last_promotion}
+        """
+    )
+
+    # ====================================
+    # RUN PREDICTION
+    # ====================================
 
     if st.button(
         "Run Manual Prediction"
     ):
+
         employee_data = {
 
             "Age": age,
 
-            "MonthlyIncome": monthly_income,
+            "MonthlyIncome":
+                monthly_income,
 
-            "TotalWorkingYears": total_working_years,
+            "TotalWorkingYears":
+                total_working_years,
 
             "DailyRate": 500,
 
-            "YearsAtCompany": years_at_company,
+            "YearsAtCompany":
+                years_at_company,
 
-            "YearsWithCurrManager": years_with_curr_manager,
+            "YearsWithCurrManager":
+                years_with_curr_manager,
 
-            "BusinessTravel": business_travel,
+            "BusinessTravel":
+                business_travel,
 
-            "Gender": gender,
+            "Gender":
+                gender,
 
-            "OverTime": overtime,
+            "OverTime":
+                overtime,
 
             "DistanceFromHome": 5,
 
@@ -523,7 +665,8 @@ elif page == "Manual Prediction":
 
             "JobLevel": 2,
 
-            "YearsInCurrentRole": 3,
+            "YearsInCurrentRole":
+                years_in_current_role,
 
             "EnvironmentSatisfaction":
                 environment_satisfaction,
@@ -535,17 +678,20 @@ elif page == "Manual Prediction":
 
             "TrainingTimesLastYear": 2,
 
-            "YearsSinceLastPromotion": 1,
+            "YearsSinceLastPromotion":
+                years_since_last_promotion,
 
             "RelationshipSatisfaction":
                 relationship_satisfaction,
 
-            "Department": department,
+            "Department":
+                department,
 
             "EducationField":
                 education_field,
 
-            "JobRole": job_role,
+            "JobRole":
+                job_role,
 
             "MaritalStatus":
                 marital_status,
@@ -554,7 +700,7 @@ elif page == "Manual Prediction":
                 work_life_balance,
 
             # ====================================
-            # ADD MISSING RAW IBM FIELDS
+            # STATIC IBM FIELDS
             # ====================================
 
             "Education": 3,
