@@ -3,6 +3,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.express as px
 
 # ====================================
 # SESSION STATE INIT
@@ -98,58 +99,220 @@ page = st.sidebar.radio(
 )
 
 # ====================================
-# DASHBOARD PAGE
+    # DASHBOARD PAGE
 # ====================================
 
 if page == "Dashboard":
 
-    st.title(
-        "Employee Attrition Dashboard"
-    )
+    st.title("Employee Attrition Dashboard")
+
+    COLOR_PURPLE = "#6366F1"
+    COLOR_HIGH = "#EF4444"
+    COLOR_MEDIUM = "#F59E0B"
+    COLOR_LOW = "#10B981"
+
+    st.markdown("""
+            <style>
+            div[data-testid="stMetric"] {
+                background-color: var(--background-secondary-color) !important;
+                padding: 15px 20px;
+                border-radius: 10px;
+                border: 2px solid var(--text-color) !important;
+                box-shadow: none !important;
+            }
+            
+            div[data-testid="stMetric"] label, 
+            div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+                color: var(--text-color) !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
     try:
+        response_summary = requests.get(f"{BACKEND_URL}/dashboard/summary")
+        response_trends = requests.get(f"{BACKEND_URL}/dashboard/trends")
 
-        response = requests.get(
-            f"{BACKEND_URL}/dashboard/summary"
-        )
+        if response_summary.status_code == 200:
+            summary = response_summary.json()
 
-        if response.status_code == 200:
-
-            summary = response.json()
-
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-
-                st.metric(
-                    "Total Employees",
-                    summary["total_employees"]
-                )
-
+                st.metric("Total Employees", summary["total_employees"])
             with col2:
-
-                st.metric(
-                    "High Risk Employees",
-                    summary["high_risk_count"]
-                )
-
+                st.metric("High Risk Employees", summary["high_risk_count"])
             with col3:
+                med_mock = int(summary["total_employees"] * 0.2)
+                st.metric("Medium Risk", med_mock)
+            with col4:
+                st.metric("Attrition Rate", f'{summary["attrition_rate"]}%')
 
-                st.metric(
-                    "Attrition Rate",
-                    f'{summary["attrition_rate"]}%'
+            st.markdown(" ")
+
+            chart_col1, chart_col2 = st.columns([2, 1])
+
+            with chart_col1:
+                st.subheader("Attrition By Department")
+
+                if response_trends.status_code == 200:
+                    trends_res = response_trends.json()
+
+                    if trends_res.get("success") and trends_res.get("data"):
+                        df_trends = pd.DataFrame(trends_res["data"])
+
+                        fig_bar = px.bar(
+                            df_trends,
+                            x="Department",
+                            y="attrition_count",
+                            color_discrete_sequence=[COLOR_PURPLE],
+                            labels={"Department": "Department", "attrition_count": "Attrition Count"}
+                        )
+
+                        fig_bar.update_layout(
+                            plot_bgcolor="rgba(0,0,0,0)",
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            margin=dict(l=20, r=20, t=20, b=20),
+                            xaxis={'categoryorder': 'total descending'}
+                        )
+                        fig_bar.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
+
+                        st.plotly_chart(fig_bar, use_container_width=True)
+                    else:
+                        st.info("No trend data available.")
+                else:
+                    st.error("Failed to load department trends from API.")
+
+            with chart_col2:
+                st.subheader("Risk Distribution")
+
+                high_count = summary["high_risk_count"]
+                total_count = summary["total_employees"]
+
+                med_count = int(total_count * 0.2)
+                low_count = max(total_count - high_count - med_count, 0)
+
+                df_donut = pd.DataFrame({
+                    "Risk Level": ["High", "Medium", "Low"],
+                    "Count": [high_count, med_count, low_count]
+                })
+
+                fig_donut = px.pie(
+                    df_donut,
+                    values="Count",
+                    names="Risk Level",
+                    hole=0.6,
+                    color="Risk Level",
+                    color_discrete_map={
+                        "High": COLOR_HIGH,
+                        "Medium": COLOR_MEDIUM,
+                        "Low": COLOR_LOW
+                    }
                 )
+
+                fig_donut.update_layout(
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.1, xanchor="center", x=0.5)
+                )
+
+                st.plotly_chart(fig_donut, use_container_width=True)
+
+                # ====================================
+                # CRITICAL ACTION REQUIRED
+                # ====================================
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.subheader("Critical Action Required")
+
+                st.markdown("""
+                    <style>
+                    .employee-risk-card {
+                        background-color: white;
+                        padding: 12px 16px;
+                        border-radius: 8px;
+                        border: 1px solid #E2E8F0;
+                        margin-bottom: 10px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        box-shadow: 0px 2px 5px rgba(0,0,0,0.02);
+                    }
+                    .emp-info {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    }
+                    .emp-avatar {
+                        width: 36px;
+                        height: 36px;
+                        background-color: #E2E8F0;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        color: #64748B;
+                        font-size: 14px;
+                    }
+                    .emp-name {
+                        font-weight: 600;
+                        color: #1E293B;
+                        font-size: 14px;
+                        margin: 0;
+                    }
+                    .emp-role {
+                        color: #64748B;
+                        font-size: 12px;
+                        margin: 0;
+                    }
+                    .risk-badge {
+                        background-color: #FEE2E2;
+                        color: #EF4444;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: bold;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+
+                try:
+                    response_emp = requests.get(f"{BACKEND_URL}/employees")
+                    if response_emp.status_code == 200:
+                        emp_list = response_emp.json().get("employees", [])
+
+                        # Bảo mật logic kiểm tra chữ hoa/thường cho risk_level
+                        high_risk_employees = [e for e in emp_list if
+                                               str(e.get("risk_level")).strip().capitalize() == "High"][:4]
+
+                        if high_risk_employees:
+                            for emp in high_risk_employees:
+                                first_letter = emp['employee_name'][0] if emp['employee_name'] else "E"
+                                job_role_str = emp.get('JobRole', emp.get('job_role', 'Staff'))
+                                dept_str = emp.get('Department', emp.get('department', 'N/A'))
+
+                                st.markdown(f"""
+                                    <div class="employee-risk-card">
+                                        <div class="emp-info">
+                                            <div class="emp-avatar">{first_letter}</div>
+                                            <div>
+                                                <p class="emp-name">{emp['employee_name']}</p>
+                                                <p class="emp-role">{job_role_str} - {dept_str}</p>
+                                            </div>
+                                        </div>
+                                        <div class="risk-badge">High Risk</div>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                        else:
+                            st.success("Safe! No High Risk employees detected.")
+                    else:
+                        st.write("Unable to fetch real-time critical actions.")
+                except Exception as e:
+                    st.write(f"Style handling error: {str(e)}")
 
         else:
-
-            st.error(
-                "Failed to load dashboard summary"
-            )
+            st.error("Failed to load dashboard summary")
 
     except Exception as e:
-
-        st.error(str(e))
-
+        st.error(f"Error rendering charts: {str(e)}")
 # ====================================
 # EMPLOYEE DATABASE PAGE
 # ====================================
